@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kanban IAs v5</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@700&family=Hanken+Grotesk:wght@400;600;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --surface-100:#F4EFE4; --surface-200:#E9E2D2;
+  --ink:#151310; --ink-2:#4A463C; --ink-3:#8F897A;
+  --hairline:#C9C2AF; --uv:#7A1FFF; --on-uv:#F4EFE4; --live:#B3261E;
+  --shadow-hard:5px 5px 0 0 var(--ink);
+  --shadow-hard-sm:3px 3px 0 0 var(--ink);
+  --b:2px solid var(--ink);
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --surface-100:#121110; --surface-200:#1D1B17;
+    --ink:#F0EADB; --ink-2:#B8B2A2; --ink-3:#7C7668;
+    --hairline:#3A372F; --shadow-hard:5px 5px 0 0 #000; --shadow-hard-sm:3px 3px 0 0 #000;
+  }
+}
+*{margin:0;padding:0;box-sizing:border-box;border-radius:0}
+body{
+  font-family:'Hanken Grotesk',sans-serif; background:var(--surface-200); color:var(--ink);
+  min-height:100vh; padding:24px;
+}
+header{
+  display:flex; align-items:flex-end; justify-content:space-between; gap:16px;
+  padding:16px 20px; background:var(--surface-100); border:var(--b); margin-bottom:20px;
+}
+.logo{font-weight:800; font-size:22px; letter-spacing:-0.02em; line-height:1}
+.logo .bar{display:block; height:4px; width:56px; background:var(--uv); margin-top:4px}
+.hmeta{font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--ink-2); text-align:right; text-transform:uppercase; letter-spacing:0.06em}
+.hmeta b{color:var(--ink)}
+.board{display:grid; grid-template-columns:repeat(4,1fr); gap:16px}
+@media (max-width:900px){.board{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:560px){.board{grid-template-columns:1fr}}
+.col{background:var(--surface-200); border:var(--b); display:flex; flex-direction:column; min-height:70vh}
+.colhead{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:10px 12px; border-bottom:var(--b); background:var(--surface-100);
+}
+.colname{font-family:'Archivo Narrow',sans-serif; font-weight:700; text-transform:uppercase; font-size:18px; letter-spacing:0.02em; outline:none; min-width:0}
+.colname:focus{box-shadow:0 0 0 2px var(--surface-100), 0 0 0 4px var(--uv)}
+.count{font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--ink-3); margin-left:8px; flex:none}
+.cards{flex:1; padding:12px; display:flex; flex-direction:column; gap:12px; min-height:60px}
+.cards.dragover{outline:2px dashed var(--ink-3); outline-offset:-6px}
+.card{
+  position:relative; background:var(--surface-100); border:var(--b);
+  box-shadow:var(--shadow-hard-sm); padding:12px 26px 12px 12px; cursor:grab;
+}
+.card.dragging{opacity:0.4}
+.card:hover{box-shadow:none; transform:translate(3px,3px)}
+.card .txt{font-size:14px; line-height:1.35; outline:none; overflow-wrap:break-word}
+.card .txt:focus{box-shadow:0 0 0 2px var(--surface-100), 0 0 0 4px var(--uv)}
+.del{
+  position:absolute; top:2px; right:2px; width:20px; height:20px; line-height:18px;
+  text-align:center; font-family:'JetBrains Mono',monospace; font-size:12px;
+  border:none; background:transparent; color:var(--ink-3); cursor:pointer; display:none;
+}
+.card:hover .del{display:block}
+.del:hover{color:var(--live); font-weight:600}
+.add{
+  margin:0 12px 12px; padding:8px; font-family:'JetBrains Mono',monospace; font-size:12px;
+  text-transform:uppercase; letter-spacing:0.06em; background:var(--surface-100);
+  border:var(--b); cursor:pointer; color:var(--ink);
+}
+.add:hover{box-shadow:none; transform:translate(2px,2px); box-shadow:var(--shadow-hard-sm)}
+.colhead .delcol{
+  border:none; background:transparent; color:var(--ink-3); cursor:pointer;
+  font-family:'JetBrains Mono',monospace; font-size:12px; width:20px; height:20px;
+  line-height:18px; text-align:center; display:none; flex:none; padding:0;
+}
+.colhead:hover .delcol{display:block}
+.colhead .delcol:hover{color:var(--live); font-weight:600}
+.addcol-row{margin-top:20px; text-align:center}
+.addcol{
+  padding:10px 22px; font-family:'JetBrains Mono',monospace; font-size:12px;
+  text-transform:uppercase; letter-spacing:0.06em; background:var(--surface-100);
+  border:var(--b); cursor:pointer; color:var(--ink); box-shadow:var(--shadow-hard-sm);
+}
+.addcol:hover{box-shadow:none; transform:translate(3px,3px)}
+.hint{font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--ink-3); text-transform:uppercase; letter-spacing:0.05em}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">leonvelazquez<span class="bar"></span></div>
+  <div class="hmeta">KANBAN DE IAs / <b>v5</b> &nbsp;/&nbsp; <span class="hint">Clic en texto edita / + IA agrega columna</span></div>
+</header>
+<div class="board" id="board"></div>
+<div class="addcol-row"><button class="addcol" id="addcol">+ IA</button></div>
+<script>
+const KEY='kanban-ias-v5';
+const SEED={cols:[
+  {name:'TecGPT', cards:['TecGPT Audit','TecGPT Agents Email','TecGPT Folders Rename Organization']},
+  {name:'Copilot', cards:['Pulso Interno','Nuevo Checkin: "Descubrimos ___ tiene ___ impacto y ___ evidencia de trust..."','Monitoreo Compromisos']},
+  {name:'Claude', cards:['Pulso Interno','AI Daily Agents Audit','Finanzas Familiares App']},
+  {name:'Littlebird', cards:['Kanban de IAs para mi Desktop Mac','Learn from mistakes in coche venta family meeting','Pulso Público','Fix Things App']}
+]};
+function load(){ try{const s=localStorage.getItem(KEY); if(s) return JSON.parse(s);}catch(e){} return SEED; }
+function save(state){ try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){} }
+let state=load();
+const board=document.getElementById('board');
+function render(){
+  board.innerHTML='';
+  state.cols.forEach((col,ci)=>{
+    const c=document.createElement('div'); c.className='col';
+    const head=document.createElement('div'); head.className='colhead';
+    const nm=document.createElement('div'); nm.className='colname'; nm.contentEditable='true'; nm.spellcheck=false; nm.textContent=col.name;
+    nm.addEventListener('blur',()=>{col.name=nm.textContent.trim()||col.name; nm.textContent=col.name; save(state);});
+    const cnt=document.createElement('span'); cnt.className='count'; cnt.textContent=String(col.cards.length).padStart(2,'0');
+    const dc=document.createElement('button'); dc.className='delcol'; dc.textContent='\u00d7'; dc.title='Eliminar columna';
+    dc.addEventListener('click',()=>{
+      if(!confirm('\u00bfEliminar la columna '+col.name+' y sus '+col.cards.length+' notas?')) return;
+      state.cols.splice(ci,1); save(state); render();
+    });
+    head.appendChild(nm); head.appendChild(cnt); head.appendChild(dc); c.appendChild(head);
+    const list=document.createElement('div'); list.className='cards';
+    list.addEventListener('dragover',e=>{
+      e.preventDefault(); list.classList.add('dragover');
+      const after=[...list.querySelectorAll('.card:not(.dragging)')].find(el=>e.clientY<el.getBoundingClientRect().top+el.offsetHeight/2);
+      const drag=document.querySelector('.card.dragging'); if(!drag) return;
+      if(after) list.insertBefore(drag,after); else list.appendChild(drag);
+    });
+    list.addEventListener('dragleave',()=>list.classList.remove('dragover'));
+    list.addEventListener('drop',e=>{e.preventDefault(); list.classList.remove('dragover'); syncFromDOM();});
+    col.cards.forEach(txt=>{
+      const card=document.createElement('div'); card.className='card'; card.draggable='true';
+      const t=document.createElement('div'); t.className='txt'; t.contentEditable='true'; t.spellcheck=false; t.textContent=txt;
+      t.addEventListener('blur',()=>syncFromDOM());
+      const d=document.createElement('button'); d.className='del'; d.textContent='\u00d7'; d.title='Eliminar';
+      d.addEventListener('click',()=>{col.cards=col.cards.filter(x=>x!==txt); save(state); render();});
+      card.addEventListener('dragstart',()=>card.classList.add('dragging'));
+      card.addEventListener('dragend',()=>{card.classList.remove('dragging'); syncFromDOM();});
+      card.appendChild(t); card.appendChild(d); list.appendChild(card);
+    });
+    c.appendChild(list);
+    const add=document.createElement('button'); add.className='add'; add.textContent='+ Nota';
+    add.addEventListener('click',()=>{
+      col.cards.push(''); save(state); render();
+      const lists=board.querySelectorAll('.cards'); const last=lists[ci].lastElementChild.querySelector('.txt'); last.focus();
+    });
+    c.appendChild(add);
+    board.appendChild(c);
+  });
+}
+document.getElementById('addcol').addEventListener('click',()=>{
+  state.cols.push({name:'Nueva IA', cards:[]}); save(state); render();
+  const names=board.querySelectorAll('.colname'); const last=names[names.length-1];
+  last.focus();
+  const r=document.createRange(); r.selectNodeContents(last); const s=getSelection(); s.removeAllRanges(); s.addRange(r);
+});
+function syncFromDOM(){
+  const cols=board.querySelectorAll('.col');
+  cols.forEach((cEl,ci)=>{
+    if(!state.cols[ci]) return;
+    state.cols[ci].cards=[...cEl.querySelectorAll('.card .txt')].map(t=>t.textContent.trim()).filter(t=>t.length>0);
+  });
+  save(state); render();
+}
+render();
+</script>
+</body>
+</html>
